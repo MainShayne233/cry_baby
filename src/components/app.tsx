@@ -1,4 +1,5 @@
 import { FunctionalComponent } from "preact";
+import { saveAs } from "file-saver";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 if ((module as any).hot) {
@@ -28,11 +29,26 @@ const styles = {
     }
 };
 
+const getCanvasElement = () => document.getElementById("editor-canvas");
+
+const getCanvasBlob = () =>
+    new Promise(res => {
+        getCanvasElement().toBlob(res);
+    });
+
+const downloadCanvas: () => void = () => {
+    getCanvasBlob().then(blob => {
+        saveAs(blob, "blob.png");
+    });
+};
+
 const App: FunctionalComponent = () => (
     <div style={styles.app}>
-        <div style={styles.controls}></div>
+        <div style={styles.controls}>
+            <button onClick={downloadCanvas}>Download</button>
+        </div>
         <div style={styles.editor}>
-            <canvas />
+            <canvas id="editor-canvas" />
         </div>
     </div>
 );
