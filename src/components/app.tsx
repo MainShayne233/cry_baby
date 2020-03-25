@@ -53,7 +53,7 @@ const downloadCanvas = () => {
   });
 };
 
-const setupCanvas = (container, imagePath) => {
+const setupCanvas = (container, imagePath, rotation) => {
   const stage = new Konva.Stage({
     container: container,
     width: getEditorWidth(),
@@ -68,35 +68,55 @@ const setupCanvas = (container, imagePath) => {
     if (res.ok) {
       const imageObj = new Image();
       imageObj.onload = () => {
-        const { width, height } = (() => {
-          if (imageObj.width > imageObj.height) {
-            const ratio = imageObj.height / imageObj.width;
+        const { imageWidth, imageHeight, canvasWidth, canvasHeight } = (() => {
+          const { imageWidth, imageHeight } = (() => {
+            if (imageObj.width > imageObj.height) {
+              const base =
+                rotation % 180 === 0 ? getEditorWidth() : getEditorHeight();
+              const ratio = imageObj.height / imageObj.width;
+              return { imageWidth: base, imageHeight: base * ratio };
+            } else {
+              const base =
+                rotation % 180 === 0 ? getEditorHeight() : getEditorWidth();
+              const ratio = imageObj.width / imageObj.height;
+              return { imageWidth: base * ratio, imageHeight: base };
+            }
+          })();
+
+          if (rotation % 180 === 0) {
             return {
-              width: getEditorWidth(),
-              height: getEditorWidth() * ratio
+              imageWidth,
+              imageHeight,
+              canvasWidth: imageWidth,
+              canvasHeight: imageHeight
             };
           } else {
-            const ratio = imageObj.width / imageObj.height;
             return {
-              width: getEditorHeight() * ratio,
-              height: getEditorHeight()
+              imageWidth,
+              imageHeight,
+              canvasWidth: imageHeight,
+              canvasHeight: imageWidth
             };
           }
         })();
+
         const image = new Konva.Image({
           image: imageObj,
-          width,
-          height
+          width: imageWidth,
+          height: imageHeight,
+          offsetX: imageWidth / 2,
+          offsetY: imageHeight / 2,
+          x: canvasWidth / 2,
+          y: canvasHeight / 2
         });
 
-        console.log({ width, height });
-        stage.width(width);
-        stage.height(height);
+        image.rotate(rotation);
 
-        window.image = image;
+        stage.width(canvasWidth);
+        stage.height(canvasHeight);
 
         image.label = "subject";
-        // add the shape to the layer
+
         layer.add(image);
         layer.batchDraw();
       };
@@ -128,13 +148,14 @@ const setupCanvas = (container, imagePath) => {
 const App = () => {
   const [imagePath, setImagePath] = useState(Option.none);
   const [urlInput, setUrlInput] = useState("");
+  const [rotation, setRotation] = useState(0);
   const canvasContainer = useRef(null);
   const instances = useInstance({});
   useEffect(() => {
     if (canvasContainer.current) {
       instances.stage = Option.fold(
         () => null,
-        imagePath => setupCanvas(canvasContainer.current, imagePath)
+        imagePath => setupCanvas(canvasContainer.current, imagePath, rotation)
       )(imagePath);
     }
   });
@@ -189,6 +210,13 @@ const App = () => {
             }}
           >
             Download
+          </button>
+          <button
+            onClick={() => {
+              setRotation((rotation + 90) % 360);
+            }}
+          >
+            Rotate
           </button>
         </div>
         <div style={styles.editor}>
