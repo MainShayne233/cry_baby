@@ -53,6 +53,84 @@ const downloadCanvas = () => {
   });
 };
 
+const addImage = (
+  stage,
+  layer,
+  imagePath,
+  options = { rotation: 0, draggable: false }
+) =>
+  new Promise((res, rej) => {
+    fetch(imagePath).then(response => {
+      if (response.ok) {
+        const imageObj = new Image();
+        imageObj.onload = () => {
+          const {
+            imageWidth,
+            imageHeight,
+            canvasWidth,
+            canvasHeight
+          } = (() => {
+            const { imageWidth, imageHeight } = (() => {
+              if (imageObj.width > imageObj.height) {
+                const base =
+                  options.rotation % 180 === 0
+                    ? options.scale.width
+                    : options.scale.height;
+                const ratio = imageObj.height / imageObj.width;
+                return { imageWidth: base, imageHeight: base * ratio };
+              } else {
+                const base =
+                  options.rotation % 180 === 0
+                    ? options.scale.height
+                    : options.scale.width;
+                const ratio = imageObj.width / imageObj.height;
+                return { imageWidth: base * ratio, imageHeight: base };
+              }
+            })();
+
+            if (options.rotation % 180 === 0) {
+              return {
+                imageWidth,
+                imageHeight,
+                canvasWidth: imageWidth,
+                canvasHeight: imageHeight
+              };
+            } else {
+              return {
+                imageWidth,
+                imageHeight,
+                canvasWidth: imageHeight,
+                canvasHeight: imageWidth
+              };
+            }
+          })();
+
+          const image = new Konva.Image({
+            image: imageObj,
+            width: imageWidth,
+            height: imageHeight,
+            offsetX: imageWidth / 2,
+            offsetY: imageHeight / 2,
+            x: canvasWidth / 2 + options.position.x,
+            y: canvasHeight / 2 + options.position.y,
+            draggable: options.draggable
+          });
+
+          image.rotate(options.rotation);
+
+          layer.add(image);
+          layer.batchDraw();
+          res(image);
+        };
+        imageObj.src = imagePath;
+
+        layer.draw();
+      } else {
+        console.error("HANDLE ME");
+      }
+    });
+  });
+
 const setupCanvas = (container, imagePath, rotation) => {
   const stage = new Konva.Stage({
     container: container,
@@ -64,68 +142,25 @@ const setupCanvas = (container, imagePath, rotation) => {
 
   stage.add(layer);
 
-  fetch(imagePath).then(res => {
-    if (res.ok) {
-      const imageObj = new Image();
-      imageObj.onload = () => {
-        const { imageWidth, imageHeight, canvasWidth, canvasHeight } = (() => {
-          const { imageWidth, imageHeight } = (() => {
-            if (imageObj.width > imageObj.height) {
-              const base =
-                rotation % 180 === 0 ? getEditorWidth() : getEditorHeight();
-              const ratio = imageObj.height / imageObj.width;
-              return { imageWidth: base, imageHeight: base * ratio };
-            } else {
-              const base =
-                rotation % 180 === 0 ? getEditorHeight() : getEditorWidth();
-              const ratio = imageObj.width / imageObj.height;
-              return { imageWidth: base * ratio, imageHeight: base };
-            }
-          })();
-
-          if (rotation % 180 === 0) {
-            return {
-              imageWidth,
-              imageHeight,
-              canvasWidth: imageWidth,
-              canvasHeight: imageHeight
-            };
-          } else {
-            return {
-              imageWidth,
-              imageHeight,
-              canvasWidth: imageHeight,
-              canvasHeight: imageWidth
-            };
-          }
-        })();
-
-        const image = new Konva.Image({
-          image: imageObj,
-          width: imageWidth,
-          height: imageHeight,
-          offsetX: imageWidth / 2,
-          offsetY: imageHeight / 2,
-          x: canvasWidth / 2,
-          y: canvasHeight / 2
-        });
-
-        image.rotate(rotation);
-
-        stage.width(canvasWidth);
-        stage.height(canvasHeight);
-
-        image.label = "subject";
-
-        layer.add(image);
-        layer.batchDraw();
-      };
-      imageObj.src = imagePath;
-
-      layer.draw();
-    } else {
-      console.error("HANDLE ME");
-    }
+  addImage(stage, layer, imagePath, {
+    rotation,
+    position: { x: 0, y: 0 },
+    scale: { width: getEditorWidth(), height: getEditorHeight() }
+  }).then(image => {
+    stage.width(image.attrs.x * 2);
+    stage.height(image.attrs.y * 2);
+    addImage(stage, layer, "/assets/eye_1.png", {
+      draggable: true,
+      rotation: 0,
+      position: { x: image.attrs.x - 100, y: image.attrs.y },
+      scale: { width: 100, height: 100 }
+    });
+    addImage(stage, layer, "/assets/eye_2.png", {
+      draggable: true,
+      rotation: 0,
+      position: { x: image.attrs.x + 100, y: image.attrs.y },
+      scale: { width: 100, height: 100 }
+    });
   });
 
   stage.on("click tap", function(e) {
@@ -133,13 +168,17 @@ const setupCanvas = (container, imagePath, rotation) => {
       stage.find("Transformer").destroy();
       layer.draw();
       return;
-    } else if (e.target.label === "eye") {
-      stage.find("Transformer").destroy();
+    }
+
+    stage.find("Transformer").destroy();
+
+    if (e.target.draggable()) {
       const tr = new Konva.Transformer();
       layer.add(tr);
       tr.attachTo(e.target);
-      layer.draw();
     }
+
+    layer.draw();
   });
 
   return stage;
@@ -217,6 +256,13 @@ const App = () => {
             }}
           >
             Rotate
+          </button>
+          <button
+            onClick={() => {
+              setImagePath(Option.none);
+            }}
+          >
+            Clear
           </button>
         </div>
         <div style={styles.editor}>
