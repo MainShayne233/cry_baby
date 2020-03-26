@@ -173,7 +173,7 @@ const setupCanvas = (container, imagePath, rotation) => {
     stage.find("Transformer").destroy();
 
     if (e.target.draggable()) {
-      const tr = new Konva.Transformer();
+      const tr = new Konva.Transformer({ padding: 10 });
       layer.add(tr);
       tr.attachTo(e.target);
     }
