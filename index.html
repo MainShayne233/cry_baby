@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cry Baby</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="page" id="image-selection-page">
+        <div>
+          <input class="interactable" id="urlInput" />
+          <button class="interactable" id="fromURLButton">
+            From URL
+          </button>
+          <input class="interactable" id="fromFileInput" type="file" />
+          <button class="interactable" id="fromExampleButton">
+            Use Example
+          </button>
+        </div>
+      </div>
+      <div class="page" id="editor-page">
+        <div id="controls-container">
+          <button class="interactable" id="downloadButton">
+            Download
+          </button>
+          <button class="interactable" id="rotateButton">
+            Rotate
+          </button>
+          <button class="interactable" id="clearButton">
+            Clear
+          </button>
+        </div>
+        <div class="interactable" id="canvasContainer"></div>
+      </div>
+    </div>
+    <!-- SOURCE -->
+    <script src="build/bundle.js"></script>
+  </body>
+</html>
