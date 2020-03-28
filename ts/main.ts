@@ -111,13 +111,26 @@ class ImageSelectionPage extends Page {
     return "/img/leo.jpg";
   }
 
+  validateImage(path: string) {
+    return new Promise((res) => res(path));
+    // return new Promise((res, rej) => {
+    //   fetch(path, { mode: "no-cors" })
+    //     .then((response) => {
+    //       if (response.ok === false) {
+    //         throw new Error("Bad HTTP response");
+    //       }
+    //     })
+    //     .then(() => {
+    //       res();
+    //     })
+    //     .catch((error) => {
+    //       rej(error);
+    //     });
+    // });
+  }
+
   validateAndSetImage(path: string) {
-    fetch(path)
-      .then((response) => {
-        if (response.ok === false) {
-          throw new Error("Bad HTTP response");
-        }
-      })
+    this.validateImage(path)
       .then(() => {
         this.nextCallback(path);
       })
@@ -152,6 +165,29 @@ class EditorPage extends Page {
     const layer = new Konva.Layer();
 
     stage.add(layer);
+
+    const imageObj = new Image();
+    imageObj.onload = () => {
+      console.log(imageObj.width);
+      console.log(imageObj.height);
+      const scale = Math.min(
+        getEditorWidth() / imageObj.width,
+        getEditorHeight() / imageObj.height
+      );
+      const image = new Konva.Image({
+        image: imageObj,
+        draggable: true,
+        scale: {
+          x: scale,
+          y: scale,
+        },
+      });
+
+      layer.add(image);
+      layer.batchDraw();
+    };
+
+    imageObj.src = this.imagePath;
   }
 }
 

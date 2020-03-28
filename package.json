@@ -6,7 +6,8 @@
   "scripts": {
     "start": "nf start",
     "watch": "webpack --mode development --watch",
-    "serve": "live-server . --watch=index.html,ts,css"
+    "serve": "live-server . --watch=index.html,ts,css",
+    "build": "webpack --mode production"
   },
   "repository": {
     "type": "git",
