@@ -3,9 +3,13 @@ import { Elm } from "./Main.elm";
 import * as serviceWorker from "./serviceWorker";
 import Konva from "konva";
 
-const { ports } = Elm.Main.init({
+const app = Elm.Main.init({
   node: document.getElementById("root"),
 });
+
+window.app = app;
+
+const { ports } = app;
 
 ports.setupCanvas.subscribe(setupCanvas);
 
@@ -19,6 +23,13 @@ ports.zoomIn.subscribe(() => {
 
 ports.zoomOut.subscribe(() => {
   window.editor.zoomOut();
+});
+
+console.log(ports);
+
+ports.generateImage.subscribe(() => {
+  const dataUrl = window.editor.generateDataUrl();
+  ports.generatedImage.send(dataUrl);
 });
 
 const editorPadding = 8 / 10;
@@ -78,6 +89,16 @@ class Editor {
     this.zoom = getPreviousUnlessFirst(zoomScales, this.zoom);
     this.configureMainImage();
     this.render();
+  }
+
+  generateDataUrl() {
+    const pixelRatio =
+      1 / Math.min(this.mainImage.scaleX(), this.mainImage.scaleY());
+    const dataUrl = this.stage.toDataURL({
+      pixelRatio,
+    });
+
+    return dataUrl;
   }
 
   configureMainImage() {

@@ -4,10 +4,11 @@ import Browser
 import Dict exposing (Dict)
 import File exposing (File)
 import File.Select as Select
-import Html exposing (Html, a, button, div, h1, img, p, text)
+import Html exposing (Html, a, button, div, h1, img, p, span, text)
 import Html.Attributes exposing (class, href, id, src, target, type_)
 import Html.Events exposing (onClick)
 import Json.Decode as JsonDecode
+import Json.Encode as JsonEncode
 import Task
 
 
@@ -16,12 +17,12 @@ import Task
 
 
 type alias Model =
-    { imagePath : Maybe String }
+    { imagePath : Maybe String, generatedImage : Maybe String }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( { imagePath = Nothing }, Cmd.none )
+    ( { imagePath = Nothing, generatedImage = Nothing }, Cmd.none )
 
 
 
@@ -43,6 +44,9 @@ type Msg
     | RotateImage
     | ZoomIn
     | ZoomOut
+    | GenerateImage
+    | GeneratedImage String
+    | ClearGeneratedImage
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -64,6 +68,9 @@ update msg model =
         ClearImage ->
             ( { model | imagePath = Nothing }, Cmd.none )
 
+        ClearGeneratedImage ->
+            ( { model | generatedImage = Nothing }, Cmd.none )
+
         RotateImage ->
             ( model, rotateImage () )
 
@@ -72,6 +79,12 @@ update msg model =
 
         ZoomOut ->
             ( model, zoomOut () )
+
+        GenerateImage ->
+            ( model, generateImage () )
+
+        GeneratedImage dataUrl ->
+            ( { model | generatedImage = Just dataUrl }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
@@ -87,6 +100,12 @@ port zoomIn : () -> Cmd msg
 
 
 port zoomOut : () -> Cmd msg
+
+
+port generateImage : () -> Cmd msg
+
+
+port generatedImage : (String -> msg) -> Sub msg
 
 
 getFileUrl : File -> Cmd Msg
@@ -109,7 +128,7 @@ view model =
         page =
             case model.imagePath of
                 Just imagePath ->
-                    viewEditorPage imagePath
+                    viewEditorPage model imagePath
 
                 Nothing ->
                     viewImageSelectionPage model
@@ -125,8 +144,8 @@ canvasContainerId =
     "canvas-container"
 
 
-viewEditorPage : String -> Html Msg
-viewEditorPage imagePath =
+viewEditorPage : Model -> String -> Html Msg
+viewEditorPage model imagePath =
     div [ id "editor-page" ]
         [ div
             [ id "editor-controls-container" ]
@@ -134,6 +153,7 @@ viewEditorPage imagePath =
             , button [ class "editor-control", onClick RotateImage ] [ text "rotate" ]
             , button [ class "editor-control no-mobile", onClick ZoomIn ] [ text "zoom +" ]
             , button [ class "editor-control no-mobile", onClick ZoomOut ] [ text "zoom -" ]
+            , button [ class "editor-control", onClick GenerateImage ] [ text "generate" ]
             ]
         , div [ id canvasContainerId ]
             []
@@ -141,7 +161,23 @@ viewEditorPage imagePath =
             [ id "editor-controls-container" ]
             [ a [ href "https://github.com/MainShayne233/cry_baby", target "_blank" ] [ button [ class "editor-control" ] [ text "view code" ] ]
             ]
+        , maybeRenderResultModal model
         ]
+
+
+maybeRenderResultModal : Model -> Html Msg
+maybeRenderResultModal model =
+    case model.generatedImage of
+        Just generatedImagePath ->
+            div [ id "resultModal", class "modal" ]
+                [ div [ class "modal-content" ]
+                    [ span [ class "close", onClick ClearGeneratedImage ] [ text "x" ]
+                    , img [ src generatedImagePath, id "result" ] []
+                    ]
+                ]
+
+        Nothing ->
+            div [] []
 
 
 viewImageSelectionPage : Model -> Html Msg
@@ -164,11 +200,16 @@ viewImageSelectionPage model =
 ---- PROGRAM ----
 
 
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    generatedImage GeneratedImage
+
+
 main : Program () Model Msg
 main =
     Browser.element
         { view = view
         , init = \_ -> init
         , update = update
-        , subscriptions = always Sub.none
+        , subscriptions = subscriptions
         }
