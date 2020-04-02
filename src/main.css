@@ -10,10 +10,31 @@
 }
 
 body {
-  font-family: 'Source Sans Pro', 'Trebuchet MS', 'Lucida Grande', 'Bitstream Vera Sans', 'Helvetica Neue', sans-serif;
+  font-family: "Source Sans Pro", "Trebuchet MS", "Lucida Grande",
+    "Bitstream Vera Sans", "Helvetica Neue", sans-serif;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   margin: 0;
   text-align: center;
   color: #293c4b;
+  background: #dfccf1;
+}
+
+button {
+    background-color: #bdd0c4;
+    border-radius: 0 0 5px 5px;
+    box-shadow: 0 6px #f7e1d3;
+    border: none;
+    cursor: pointer;
+    padding: 25px 80px;
+    display: inline-block;
+    text-transform: uppercase;
+    outline: none;
+    position: relative;
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-size: 15px;
 }
 
 h1 {
@@ -24,3 +45,26 @@ img {
   margin: 20px 0;
   max-width: 200px;
 }
+
+#app-container {
+    display: flex;
+    justify-content: center;
+    position:absolute;
+    top:0;
+    bottom:0;
+    left:0;
+    right:0;
+    overflow:hidden;
+    z-index:-1;
+}
+
+
+#image-selection-controls {
+    margin-top: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 300px;
+}
+
