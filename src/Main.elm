@@ -1,10 +1,11 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Browser
+import Dict exposing (Dict)
 import File exposing (File)
 import File.Select as Select
-import Html exposing (Html, button, div, h1, img, p, text)
-import Html.Attributes exposing (id, src, type_)
+import Html exposing (Html, a, button, div, h1, img, p, text)
+import Html.Attributes exposing (class, href, id, src, target, type_)
 import Html.Events exposing (onClick)
 import Json.Decode as JsonDecode
 import Task
@@ -27,13 +28,21 @@ init =
 ---- UPDATE ----
 
 
+type alias CanvasParams =
+    { imagePath : String
+    , canvasContainerId : String
+    }
+
+
 type Msg
     = NoOp
     | PickImage
     | GotFile File (List File)
     | GotImagePath String
-    | UseExampleImage
     | ClearImage
+    | RotateImage
+    | ZoomIn
+    | ZoomOut
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -50,16 +59,34 @@ update msg model =
             )
 
         GotImagePath imagePath ->
-            ( { model | imagePath = Just imagePath }, Cmd.none )
-
-        UseExampleImage ->
-            ( { model | imagePath = Just exampleImagePath }, Cmd.none )
+            ( { model | imagePath = Just imagePath }, setupCanvas (CanvasParams imagePath canvasContainerId) )
 
         ClearImage ->
             ( { model | imagePath = Nothing }, Cmd.none )
 
+        RotateImage ->
+            ( model, rotateImage () )
+
+        ZoomIn ->
+            ( model, zoomIn () )
+
+        ZoomOut ->
+            ( model, zoomOut () )
+
         NoOp ->
             ( model, Cmd.none )
+
+
+port setupCanvas : CanvasParams -> Cmd msg
+
+
+port rotateImage : () -> Cmd msg
+
+
+port zoomIn : () -> Cmd msg
+
+
+port zoomOut : () -> Cmd msg
 
 
 getFileUrl : File -> Cmd Msg
@@ -87,28 +114,46 @@ view model =
                 Nothing ->
                     viewImageSelectionPage model
     in
-    div [ id "app-container" ] [ page ]
+    div [ id "app-container" ]
+        [ h1 [] [ text "Cry Baby \u{1F97A}" ]
+        , div [ id "page-container" ] [ page ]
+        ]
+
+
+canvasContainerId : String
+canvasContainerId =
+    "canvas-container"
 
 
 viewEditorPage : String -> Html Msg
 viewEditorPage imagePath =
-    div []
-        [ img [ src imagePath ] []
-        , button [ onClick ClearImage ] [ text "Clear" ]
+    div [ id "editor-page" ]
+        [ div
+            [ id "editor-controls-container" ]
+            [ button [ class "editor-control", onClick ClearImage ] [ text "clear" ]
+            , button [ class "editor-control", onClick RotateImage ] [ text "rotate" ]
+            , button [ class "editor-control no-mobile", onClick ZoomIn ] [ text "zoom +" ]
+            , button [ class "editor-control no-mobile", onClick ZoomOut ] [ text "zoom -" ]
+            ]
+        , div [ id canvasContainerId ]
+            []
+        , div
+            [ id "editor-controls-container" ]
+            [ a [ href "https://github.com/MainShayne233/cry_baby", target "_blank" ] [ button [ class "editor-control" ] [ text "view code" ] ]
+            ]
         ]
 
 
 viewImageSelectionPage : Model -> Html Msg
 viewImageSelectionPage model =
     div [ id "image-selection-page" ]
-        [ h1 [] [ text "Cry Baby" ]
-        , div [ id "image-selection-controls" ]
+        [ div [ id "image-selection-controls" ]
             [ div []
                 [ button [ onClick PickImage ] [ text "Upload Image" ]
                 ]
             , div [] [ text "Or" ]
             , div []
-                [ button [ onClick UseExampleImage ] [ text "Use Example" ]
+                [ button [ onClick (GotImagePath exampleImagePath) ] [ text "Use Example" ]
                 ]
             ]
         ]
