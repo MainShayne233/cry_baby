@@ -17,12 +17,8 @@ ports.rotateImage.subscribe(() => {
   window.editor.rotateImage();
 });
 
-ports.zoomIn.subscribe(() => {
-  window.editor.zoomIn();
-});
-
-ports.zoomOut.subscribe(() => {
-  window.editor.zoomOut();
+ports.resetEyes.subscribe(() => {
+  window.editor.resetEyes();
 });
 
 ports.generateImage.subscribe(() => {
@@ -30,45 +26,33 @@ ports.generateImage.subscribe(() => {
   ports.generatedImage.send(dataUrl);
 });
 
-window.addEventListener("resize", () => {
-  window.editor.configureMainImage();
-});
-
 const editorPadding = 8 / 10;
 
-const windowWidth = () => window.innerWidth;
-const windowHeight = () => window.innerHeight;
-const getEditorWidth = () => windowWidth() * editorPadding;
-const getEditorHeight = () => windowHeight() * editorPadding;
-
-const zoomScales = [0.1, 0.25, 0.5, 1, 1.5, 2, 3];
-
-const getNextUnlessLast = (values, value) => {
-  const index = values.indexOf(value) + 1;
-  return index === values.length ? value : values[index];
-};
-
-const getPreviousUnlessFirst = (values, value) => {
-  const index = values.indexOf(value) - 1;
-  return index === -1 ? value : values[index];
-};
+const windowWidth = window.innerWidth;
+const windowHeight = window.innerHeight;
+const getEditorWidth = () => windowWidth * editorPadding;
+const getEditorHeight = () => windowHeight * editorPadding;
 
 class Editor {
   constructor({ imagePath, container }, doneCallback) {
     this.imagePath = imagePath;
     this.container = container;
-    this.zoom = 1;
     this.setupStage();
     this.setupLayer();
     this.addMainImage()
-      .then(
-        this.addImage.bind(this, EYE_IMAGE_PATHS[0], {
-          draggable: true,
-          x: 50,
-          y: 50,
-          scale: { x: 0.4, y: 0.4 },
-        })
-      )
+      .then(this.addEyeImages.bind(this))
+      .then(this.setupTransformer.bind(this))
+      .then(this.render.bind(this))
+      .then(doneCallback);
+  }
+
+  addEyeImages() {
+    return this.addImage(EYE_IMAGE_PATHS[0], {
+      draggable: true,
+      x: 50,
+      y: 50,
+      scale: { x: 0.4, y: 0.4 },
+    })
       .then(
         this.addImage.bind(this, EYE_IMAGE_PATHS[1], {
           draggable: true,
@@ -77,9 +61,17 @@ class Editor {
           scale: { x: 0.4, y: 0.4 },
         })
       )
-      .then(this.setupTransformer.bind(this))
-      .then(this.render.bind(this))
-      .then(doneCallback);
+      .then(
+        () =>
+          new Promise((res) => {
+            this.getEyeImages().forEach((eyeImage) => {
+              const tr = new Konva.Transformer({ padding: 5 });
+              this.layer.add(tr);
+              tr.attachTo(eyeImage);
+            });
+            res();
+          })
+      );
   }
 
   getEyeImages() {
@@ -91,18 +83,14 @@ class Editor {
 
   setupTransformer() {
     return new Promise((res) => {
-      this.stage.on("click tap", (e) => {
+      this.stage.on("click tap dragstart", (e) => {
         if (e.target === this.stage) {
-          this.forEachTransformer((transformer) => {
-            transformer.destroy();
-          });
+          this.destroyTransformers();
           this.layer.draw();
           return;
         }
 
-        this.forEachTransformer((transformer) => {
-          transformer.destroy();
-        });
+        this.destroyTransformers();
 
         if (e.target.draggable()) {
           const tr = new Konva.Transformer({ padding: 5 });
@@ -113,13 +101,13 @@ class Editor {
         this.layer.draw();
       });
 
-      this.getEyeImages().forEach((eyeImage) => {
-        const tr = new Konva.Transformer({ padding: 5 });
-        this.layer.add(tr);
-        tr.attachTo(eyeImage);
-      });
-
       res();
+    });
+  }
+
+  destroyTransformers() {
+    this.forEachTransformer((transformer) => {
+      transformer.destroy();
     });
   }
 
@@ -151,22 +139,15 @@ class Editor {
     this.render();
   }
 
-  zoomIn() {
-    this.zoom = getNextUnlessLast(zoomScales, this.zoom);
-    this.configureMainImage();
-    this.render();
-  }
-
-  zoomOut() {
-    this.zoom = getPreviousUnlessFirst(zoomScales, this.zoom);
-    this.configureMainImage();
-    this.render();
+  resetEyes() {
+    this.getEyeImages().forEach((eyeImage) => {
+      eyeImage.destroy();
+    });
+    this.addEyeImages().then(this.render.bind(this));
   }
 
   generateDataUrl() {
-    this.forEachTransformer((transformer) => {
-      transformer.destroy();
-    });
+    this.destroyTransformers();
     this.render();
     const pixelRatio =
       1 / Math.min(this.mainImage.scaleX(), this.mainImage.scaleY());
@@ -178,6 +159,7 @@ class Editor {
   }
 
   configureMainImage() {
+    this.destroyTransformers();
     const [
       [canvasWidthDim, canvasWidthScale],
       [canvasHeightDim, canvasHeightScale],
@@ -193,8 +175,8 @@ class Editor {
           ];
 
     const canvasScale = Math.min(
-      (getEditorWidth() / this.mainImage[canvasWidthDim]()) * this.zoom,
-      (getEditorHeight() / this.mainImage[canvasHeightDim]()) * this.zoom
+      getEditorWidth() / this.mainImage[canvasWidthDim](),
+      getEditorHeight() / this.mainImage[canvasHeightDim]()
     );
 
     const renderDimensions = {
@@ -216,10 +198,6 @@ class Editor {
       width: renderDimensions.width * offset.x,
       height: renderDimensions.height * offset.y,
     };
-
-    this.getEyeImages().forEach((eyeImage) => {
-      eyeImage.scale({ x: canvasScale, y: canvasScale });
-    });
 
     this.mainImage.scale({ x: canvasScale, y: canvasScale });
 

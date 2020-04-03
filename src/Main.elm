@@ -42,8 +42,7 @@ type Msg
     | GotImagePath String
     | ClearImage
     | RotateImage
-    | ZoomIn
-    | ZoomOut
+    | ResetEyes
     | GenerateImage
     | GeneratedImage String
     | ClearGeneratedImage
@@ -74,11 +73,8 @@ update msg model =
         RotateImage ->
             ( model, rotateImage () )
 
-        ZoomIn ->
-            ( model, zoomIn () )
-
-        ZoomOut ->
-            ( model, zoomOut () )
+        ResetEyes ->
+            ( model, resetEyes () )
 
         GenerateImage ->
             ( model, generateImage () )
@@ -94,6 +90,9 @@ port setupCanvas : CanvasParams -> Cmd msg
 
 
 port rotateImage : () -> Cmd msg
+
+
+port resetEyes : () -> Cmd msg
 
 
 port zoomIn : () -> Cmd msg
@@ -149,17 +148,16 @@ viewEditorPage model imagePath =
     div [ id "editor-page" ]
         [ div
             [ id "editor-controls-container" ]
-            [ button [ class "editor-control", onClick ClearImage ] [ text "clear" ]
-            , button [ class "editor-control", onClick RotateImage ] [ text "rotate" ]
-            , button [ class "editor-control no-mobile", onClick ZoomIn ] [ text "zoom +" ]
-            , button [ class "editor-control no-mobile", onClick ZoomOut ] [ text "zoom -" ]
+            [ button [ class "editor-control", onClick RotateImage ] [ text "rotate" ]
+            , button [ class "editor-control", onClick ResetEyes ] [ text "reset eyes" ]
             , button [ class "editor-control", onClick GenerateImage ] [ text "generate" ]
             ]
         , div [ id canvasContainerId ]
             []
         , div
             [ id "editor-controls-container" ]
-            [ a [ href "https://github.com/MainShayne233/cry_baby", target "_blank" ] [ button [ class "editor-control" ] [ text "view code" ] ]
+            [ button [ class "editor-control", onClick ClearImage ] [ text "use new image" ]
+            , a [ href "https://github.com/MainShayne233/cry_baby", target "_blank" ] [ button [ class "editor-control" ] [ text "view code" ] ]
             ]
         , maybeRenderResultModal model
         ]
