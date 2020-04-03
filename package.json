@@ -14,5 +14,8 @@
   "license": "ISC",
   "dependencies": {
     "konva": "^4.2.2"
+  },
+  "devDependencies": {
+    "create-elm-app": "^4.2.4"
   }
 }

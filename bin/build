@@ -1,0 +1,7 @@
+#! /usr/bin/env bash
+
+main() {
+  ./node_modules/.bin/elm-app build
+}
+
+main "$@"
