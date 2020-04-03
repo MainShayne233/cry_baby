@@ -3,11 +3,11 @@ import { Elm } from "./Main.elm";
 import * as serviceWorker from "./serviceWorker";
 import Konva from "konva";
 
+const EYE_IMAGE_PATHS = ["/eye_1.png", "/eye_2.png"];
+
 const app = Elm.Main.init({
   node: document.getElementById("root"),
 });
-
-window.app = app;
 
 const { ports } = app;
 
@@ -25,18 +25,21 @@ ports.zoomOut.subscribe(() => {
   window.editor.zoomOut();
 });
 
-console.log(ports);
-
 ports.generateImage.subscribe(() => {
   const dataUrl = window.editor.generateDataUrl();
   ports.generatedImage.send(dataUrl);
 });
 
+window.addEventListener("resize", () => {
+  window.editor.configureMainImage();
+});
+
 const editorPadding = 8 / 10;
 
-const getEditorWidth = () => window.innerWidth * editorPadding;
-
-const getEditorHeight = () => window.innerHeight * editorPadding;
+const windowWidth = () => window.innerWidth;
+const windowHeight = () => window.innerHeight;
+const getEditorWidth = () => windowWidth() * editorPadding;
+const getEditorHeight = () => windowHeight() * editorPadding;
 
 const zoomScales = [0.1, 0.25, 0.5, 1, 1.5, 2, 3];
 
@@ -57,7 +60,76 @@ class Editor {
     this.zoom = 1;
     this.setupStage();
     this.setupLayer();
-    this.addMainImage().then(this.render.bind(this)).then(doneCallback);
+    this.addMainImage()
+      .then(
+        this.addImage.bind(this, EYE_IMAGE_PATHS[0], {
+          draggable: true,
+          x: 50,
+          y: 50,
+          scale: { x: 0.4, y: 0.4 },
+        })
+      )
+      .then(
+        this.addImage.bind(this, EYE_IMAGE_PATHS[1], {
+          draggable: true,
+          x: 200,
+          y: 50,
+          scale: { x: 0.4, y: 0.4 },
+        })
+      )
+      .then(this.setupTransformer.bind(this))
+      .then(this.render.bind(this))
+      .then(doneCallback);
+  }
+
+  getEyeImages() {
+    return this.layer
+      .getChildren()
+      .toArray()
+      .filter((eyeImage) => eyeImage !== this.mainImage);
+  }
+
+  setupTransformer() {
+    return new Promise((res) => {
+      this.stage.on("click tap", (e) => {
+        if (e.target === this.stage) {
+          this.forEachTransformer((transformer) => {
+            transformer.destroy();
+          });
+          this.layer.draw();
+          return;
+        }
+
+        this.forEachTransformer((transformer) => {
+          transformer.destroy();
+        });
+
+        if (e.target.draggable()) {
+          const tr = new Konva.Transformer({ padding: 5 });
+          this.layer.add(tr);
+          tr.attachTo(e.target);
+        }
+
+        this.layer.draw();
+      });
+
+      this.getEyeImages().forEach((eyeImage) => {
+        const tr = new Konva.Transformer({ padding: 5 });
+        this.layer.add(tr);
+        tr.attachTo(eyeImage);
+      });
+
+      res();
+    });
+  }
+
+  forEachTransformer(func) {
+    this.stage
+      .find("Transformer")
+      .toArray()
+      .forEach((transformer) => {
+        func(transformer);
+      });
   }
 
   setupStage() {
@@ -92,6 +164,10 @@ class Editor {
   }
 
   generateDataUrl() {
+    this.forEachTransformer((transformer) => {
+      transformer.destroy();
+    });
+    this.render();
     const pixelRatio =
       1 / Math.min(this.mainImage.scaleX(), this.mainImage.scaleY());
     const dataUrl = this.stage.toDataURL({
@@ -141,6 +217,10 @@ class Editor {
       height: renderDimensions.height * offset.y,
     };
 
+    this.getEyeImages().forEach((eyeImage) => {
+      eyeImage.scale({ x: canvasScale, y: canvasScale });
+    });
+
     this.mainImage.scale({ x: canvasScale, y: canvasScale });
 
     this.mainImage.offsetX(this.mainImage.width() / 2);
@@ -162,13 +242,12 @@ class Editor {
   }
 
   addMainImage() {
-    return new Promise((res) => {
-      this.addImage(this.imagePath, { preventDefault: false }).then((image) => {
+    return this.addImage(this.imagePath, { preventDefault: false }).then(
+      (image) => {
         this.mainImage = image;
         this.configureMainImage();
-        res();
-      });
-    });
+      }
+    );
   }
 
   addImage(path, options = {}) {
@@ -184,7 +263,7 @@ class Editor {
         res(image);
       };
 
-      imageObj.src = this.imagePath;
+      imageObj.src = path;
     });
   }
 
