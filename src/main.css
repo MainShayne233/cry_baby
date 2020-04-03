@@ -67,7 +67,7 @@ img {
 .editor-control {
   padding: 0px;
   margin: 20px;
-  width: 120px;
+  width: 150px;
   height: 30px;
 }
 
@@ -133,5 +133,6 @@ img#result {
 @media only screen and (min-device-width: 375px) and (max-device-width: 812px) and (-webkit-min-device-pixel-ratio: 3) and (orientation: portrait) {
   .editor-control {
     font-size: 11px;
+    width: 120px;
   }
 }
